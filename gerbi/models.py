@@ -542,6 +542,107 @@ class Page(MPTTModel):
                 return self.__class__.objects.get(id=self.parent.id)
         return None
 
+    """
+    MPTT Methods override to enable proxying.
+    """
+
+    def get_ancestors(self, ascending=False, include_self=False):
+        """
+        Overloads get_children so it returns MESProxyPage (not Page)
+        instances.
+       
+        Cannot use the same simple trick as in other methods: qset is
+        sorted which trigers object instanciations.
+        """
+        qset = MPTTModel.get_ancestors( self, ascending=ascending,
+                                        include_self=include_self )
+        if qset:
+            ## Somehow Pages in qset do get instanciated...
+            qset._result_cache = None
+            qset.model         = self.__class__           
+        return qset
+
+
+    def get_children ( self ):
+        """
+        Overloads get_children so it returns MESProxyPage (not Page)
+        instances.
+        """
+        qset = MPTTModel.get_children( self )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+
+
+    def get_descendants(self, include_self=False):
+        qset = MPTTModel.get_descendants( self, include_self=include_self )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+
+
+    def get_leafnodes(self, include_self=False):
+        qset = MPTTModel.get_leafnodes( self, include_self=include_self )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+
+
+    def get_next_sibling(self, **filters):
+        qset =  MPTTModel.get_next_sibling( self, **filters )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+   
+
+    def get_previous_sibling(self, **filters):
+        qset = MPTTModel.get_previous_sibling( self, **filters )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+
+    def get_root(self):
+        qset = MPTTModel.get_root( self )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+
+
+    def get_siblings(self, include_self=False):
+        qset = MPTTModel.get_siblings( self, include_self=include_self )
+        if qset:
+            qset._result_cache = None
+            qset.model         = self.__class__
+        return qset
+
+    """
+    Wrappers around attributes that points to related objects.
+    
+    Basically you never can traverse a relation directly through
+    attribute: self.related, you need this kind of wrapper
+    self.get_related(). Obviously, this has a cost...
+    """
+
+    def get_page_to_redirect_to( self ):
+        """
+        Helper to make redirection work with proxying.
+        """
+        if self.redirect_to is not None:
+            return self.__class__.objects.get(pk=self.redirect_to.pk)
+        return None
+
+
+    def get_parent( self ):
+        if self.parent is not None:
+            return self.__class__.objects.get(pk=self.parent.pk)
+        return None
+
 
 class Content(models.Model):
     """A block of content, tied to a :class:`Page <gerbi.models.Page>`,
